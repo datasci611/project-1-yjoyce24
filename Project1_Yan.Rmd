@@ -1,0 +1,172 @@
+---
+title: "Project 1"
+author: "Joyce Yan"
+date: "9/24/2018"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    self_contained: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, messages = FALSE, warnings = FALSE)
+library(tidyverse)
+library(datasets)
+library(knitr)
+library(kableExtra)
+data("USArrests")
+data("warpbreaks")
+data("quakes")
+data("midwest")
+```
+
+# US Arrests
+
+<br>
+
+The "USArrests" data set in R contains data from 1973 for each US state about arrests per 100,000 residents for assault, murder, and rape, as well as the percent of the population living in urban areas.
+
+
+```{r} 
+### Create Total column
+arrests <- USArrests %>%
+  mutate(Total = rowSums(USArrests)-UrbanPop) %>%
+  mutate(State = rownames(USArrests)) %>%
+  select(State, Murder, Assault, Rape, Total, UrbanPop)
+
+### Plot Urban Population Percentage against Types
+line_a = round(coef(lm(arrests$Assault~ arrests$UrbanPop)),2)
+line_m = round(coef(lm(arrests$Murder ~ arrests$UrbanPop)),2)
+line_r = round(coef(lm(arrests$Rape ~ arrests$UrbanPop)),2)
+
+arrests %>%
+ggplot(mapping = aes(x = UrbanPop))+
+  geom_point(mapping = aes(y = Murder, color = "Murder")) +
+  geom_line(stat = "smooth", method = "lm", mapping = aes(y = Murder), color = "black", alpha = 1/2, se = FALSE, size = .5) +
+  annotate('text', label= paste('y =', line_m[2], "x +", line_m[1]), x=35.5, y=-5, color='black', size = 2) +
+  geom_point(mapping = aes(y = Assault, color = "Assault")) +
+  geom_line(stat = "smooth", method = "lm", mapping = aes(y = Assault), color = "darkgrey", alpha = 1/2, se = FALSE) +
+  annotate('text', label= paste('y =', line_a[2], "x +", line_a[1]), x=35.5, y=140, color='darkgrey', size = 2) +
+  geom_point(mapping = aes(y = Rape, color = "Rape")) +
+  geom_line(stat = "smooth", method = "lm", mapping = aes(y = Rape), color = "red", alpha = 1/2, se = FALSE) +
+  annotate('text', label= paste('y =', line_r[2], "x +", line_r[1]), x=35.5, y=25, color='red', size = 2) +
+  theme_bw() +
+  labs(y = "Frequency (per 100,000 residents)", x = "Urban Population Percentage", title ="Arrest Types and Urban Population Percentage in US States") +
+  scale_color_manual(values=c("darkgrey", "black", "red"), name="Type") +
+  theme(plot.title = element_text(face = "bold"))
+```
+
+<br>
+
+The figure above shows the distribution of arrest types for different urban population percentages.  Among the 50 US states, there is a wide variety of urban population percentages, ranging from a little over 30% to over 90%.  There does not appear to be a relationship between urban population percentage and murder arrests per 100,000 residents, but the figure does suggest that higher urban population percentages may be associated with higher frequencies of rape arrests. Although not obvious because of the amount of variation in the plot, the slope of line of best fit for assault arrests indicates a positive correlation between urban population percentage and assault arrest frequency. In general, assault arrests seem to be the most frequent, followed by rape arrests, and then murder arrests.
+
+Because this data set only provides data for frequency of arrests, which does not equal the frequency of actual crimes committed, it would be interesting to examine the number of reported cases for these violent crimes for each state and compare each one to the corresponding number of arrests to see if perpetrators are more likely to get away with certain types of violent crime than others, and in which states that is the case.
+
+<br><br>
+
+# Yarn Breaks During Weaving
+
+<br>
+
+The "warpbreaks" data set in R contains data about the number of warp breaks per loom for 2 yarn types (A and B) and 3 tension levels (low, medium, and high).  There are 9 observations for each yarn type and tension level combination.
+
+<br>
+
+```{r} 
+yarn_totals = warpbreaks %>%
+  group_by(wool) %>%
+  summarise(total_breaks = sum(breaks))
+
+means = warpbreaks %>%
+  group_by(wool, tension) %>%
+  summarise(mean = mean(breaks))
+```
+<br>
+
+The total number of warp breaks summed across all three tension levels is greater for wool A than wool B within this data set, with `r yarn_totals$total_breaks[1]` breaks for wool A, and `r yarn_totals$total_breaks[2]` breaks for wool B.
+
+<br>
+
+```{r}
+warpbreaks %>%
+  ggplot(mapping = aes(x = wool, y = breaks))+
+    geom_boxplot() +
+    geom_point(alpha=1/2) +
+    facet_grid(cols = vars(tension)) +
+    labs(title = "Breaks by Tension Level and Wool Type", x = "Wool Type", y = "Number of Breaks") +
+    theme(plot.title = element_text(face = "bold"))
+```
+
+The figure above displays the distribution of warp breaks for each wool type and each tension level.  Weaving at low tension with wool A seems to result in the most warp breaks out of all the combinations of tension levels and wool types, with an average of `r round(means[1,3],1)` breaks. At high tension, performance of wool A seems to be very unpredictable.  In contrast, wool B performs the best at high tension, with an average of `r round(means[6,3],1)` breaks per loom.
+
+The data set "warpbreaks" is fairly small, and it would be interesting to gather more data for these two wool types at these three tension levels to see if these patterns still apply with a greater sample size.
+
+<br>
+
+# Earthquakes
+
+<br>
+
+The 'quakes' data set in R comprises locations and seismic data of 1000 earthquakes off Fiji since 1964.
+
+<br>
+
+```{r} 
+quakes %>%
+  ggplot(mapping = aes(x = lat, y = long, size = mag)) +
+  geom_point(alpha = 1/10) +
+  theme_bw() +
+  labs(x = "Latitude", y = "Longitude", title = "Earthquake Locations and Magnitude") + 
+  scale_size_continuous(name = "Magnitude") +
+  theme(plot.title = element_text(face = "bold"))
+```
+
+<br>
+
+The figure above shows a visual representation of the locations of the 1000 earthquakes, and the size of the points correspond to the Richter magnitude of the earthquakes. The earthquake magnitudes seem to vary a good amount for each general location, and there does not appear to be a certain area with mostly earthquakes of a certain magnitude.  The average magnitude of these earthquakes is `r mean(quakes$mag)` on the Richter scale. The spread of the earthquakes has an interesting shape, and no earthquakes are isolated from other earthquakes. The dark spots on the figure show where there were a large number of earthquakes occuring in the same location.  In particular, there were a lot of earthquakes at around (-22, 182) and (-16, 182). It would be interesting to examine whether there is anything geologically special about this region, and specifically this longitude. 
+
+For further investigation, it would also be useful to overlay a map on the above plot of earthquake locations to get a better idea of where the earthquakes occurred in relation to geographic markers.  It might also be interesting to find out where major populations were located, and how many people were affected by each earthquake.
+
+<br>
+
+# Midwest
+
+<br>
+
+The "midwest" data set in R contains demographic data of counties in the midwestern United States.  Included are county names, states, and whether each county is in a metro area or not.  For each county there is demographic data relating to race, poverty, and education.
+
+<br>
+```{r}
+mean_belowpov = mean(midwest$percbelowpoverty)
+mean_colledu = mean(midwest$percollege)
+
+state_metro = midwest %>%
+  group_by(state) %>%
+  summarise(total = n(), mean_percpov = mean(percbelowpoverty), mean_percoll = mean(percollege))
+
+state_metro = midwest %>%
+ filter(inmetro == 1) %>%
+  group_by(state, inmetro) %>%
+  summarise(total_metro = n()) %>%
+  full_join(state_metro, by = "state") %>%
+  mutate(perc_countiesmetro = 100*(total_metro/total)) %>%
+  select(-inmetro, -total_metro, -total)
+
+state_metro %>%
+  ggplot(mapping = aes(y = mean_percpov, x = perc_countiesmetro)) +
+  geom_point(mapping = aes(color = mean_percoll)) +
+  geom_hline(yintercept = mean_belowpov)+
+  annotate('text', label= paste("mean percent below poverty =", round(mean_belowpov,2)), x=35.5, y=12.6, color='black', size = 2.5) +
+  theme_bw() +
+  geom_text(mapping = aes(label = paste(round(mean_percoll,2),"%", sep = "")), size = 2.5, vjust = 2, fontface = "bold") +
+  guides(color=guide_legend(title="Percent\nCollege\nEducated")) +
+  labs(x = "Percent of Counties in Metro Areas", y = "Percent Below Poverty", title = "Poverty and Metropolitan Percentages by State") +
+  theme(plot.title = element_text(face = "bold")) +
+  ylim(10.25,NA)
+```
+<br>
+
+The figure above is produced by aggregating data from the "midwest" data set by state. The percent of counties that are in metro areas and the average percent below poverty for each state are displayed through the location of the points in the plot. The color of the points correspond to the average percent college educated for each state.  The percent of counties in metro areas ranges from around 27.5% to 45.5%, and the percent below poverty ranges from around 10.3% to 14.2%. The 2 states with lower percents of college educated people are also the 2 states with higher percentages of counties in metro areas.  Compared to the mean percent below poverty for all midwestern counties of `r round(mean_belowpov,2)`%, three states have average percents below poverty that fall above this mean.
+
+Because the "midwest" data set contains a vast amount of information for racial demographics, a next step could be to examine the relationship between racial percentages and poverty.  It would also be interesting to map out the distribution of poverty or racial percentages two-dimensionally based on the location of each county.
